@@ -59,10 +59,10 @@ class UC():
             creditos = info["Creditos"]
             self.infoMateria = (materia, previas, creditos)
             return True
-        except KeyError:
+        except:
             self.infoMateria = None
-            return False
-
+            raise KeyError ("La credenciales ingresadas son incorrectas")
+        
     def nombreMateria(self):
         """
         Devuelve el nombre de la materia.
@@ -233,7 +233,15 @@ class GestorExpediente:
         self.data = datos
 
     def inscriptos(self, materia2: UC):
+        """
+        Inscribe al estudiante en una unidad curricular y actualiza el archivo de registros.
 
+        Args:
+            materia2 (UC): Objeto UC correspondiente a la materia en la que se inscribe el estudiante.
+
+        Este método verifica si la materia ya tiene inscriptos registrados en el archivo 'Registros.json'.
+        Si no existe, crea la entrada correspondiente. Luego, agrega el nombre del estudiante si aún no está inscripto.
+        """
         archivo = "Registros.json"
         uc = materia2.nombreMateria()
         nombre = self.data['Nombre']
@@ -251,6 +259,16 @@ class GestorExpediente:
             json.dump(self.contenido, file3, ensure_ascii=False, indent=4)
 
     def matricular(self, materia: UC):
+        """
+        Matricula al estudiante en una unidad curricular y registra su inscripción.
+
+        Args:
+            materia (UC): Objeto UC de la materia a matricular.
+
+        Este método agrega la materia al listado de materias matriculadas del estudiante,
+        guarda los datos actualizados en el archivo JSON correspondiente, y registra
+        al estudiante en la lista de inscriptos de la UC.
+        """
 
         datos = self.cargarDatos()
         uc = materia.nombreMateria()
@@ -266,7 +284,15 @@ class GestorExpediente:
         self.inscriptos(materia)
 
     def desmatricular(self, materia: UC):
+        """
+        Elimina la matrícula del estudiante en una unidad curricular.
 
+        Args:
+            materia (UC): Objeto UC de la materia a desmatricular.
+
+        Este método remueve la materia del listado de materias matriculadas
+        del estudiante y actualiza el archivo JSON correspondiente.
+        """
         datos = self.cargarDatos()
         uc = materia.nombreMateria()
         creditos = materia.getCreditos()
@@ -339,12 +365,12 @@ class Estudiante():
         requisitos = materia.nombrePrevias()
         uc = materia.nombreMateria()
 
-        if not requisitos and uc not in self.aprobadas:
+        if not requisitos:
             self.usuario.agregarExamenInscripto(materia)
             return True
 
         for requisito in requisitos:
-            if requisito not in self.aprobadas:
+            if requisito not in self.aprobadas and requisito not in self.matriculadas:
                 return False
 
         self.usuario.agregarExamenInscripto(materia)
@@ -360,6 +386,20 @@ class Estudiante():
         self.usuario.quitarUcExamen(materia)
     
     def matricularUC(self, materia: UC):
+        """
+        Intenta matricular al estudiante en una unidad curricular, verificando requisitos previos.
+
+        Args:
+            materia (UC): Objeto UC de la materia que se desea matricular.
+
+        Returns:
+            bool: True si la inscripción fue exitosa, False si no se cumplen los requisitos previos.
+
+        Este método primero consulta las materias previas requeridas para la UC.
+        Si no existen requisitos, matricula directamente. En caso de haber requisitos,
+        verifica que estén aprobadas o que el estudiante esté inscripto a sus exámenes.
+        Si se cumplen, procede con la matrícula.
+        """
         previas = materia.nombrePrevias()
 
         if not previas:
@@ -367,13 +407,21 @@ class Estudiante():
             return True
 
         for previa in previas:
-            if previa not in self.aprobadas and previa not in self.examen:
+            if previa not in self.aprobadas and previa not in self.examen and previa not in self.matriculadas:
                 return False
 
         self.usuario.matricular(materia)
         return True
     
     def desmatricularUC(self, materia: UC):
+        """
+        Desmatricula al estudiante de una unidad curricular.
+
+        Args:
+            materia (UC): Objeto UC de la materia a desmatricular.
+
+        Este método invoca el procedimiento de desmatriculación del usuario sobre la UC indicada.
+        """
         self.usuario.desmatricular(materia)
 
     def __str__(self):
@@ -464,10 +512,35 @@ class Secretaria():
         return True
     
     def matricularEstudiante(self, materia: UC):
+        """
+        Matricula al estudiante en una unidad curricular, verificando requisitos previos.
+
+        Args:
+            materia (UC): Objeto UC correspondiente a la materia en la que se desea inscribir.
+
+        Este método delega la matrícula en el método `matricularUC` del estudiante,
+        que incluye la verificación de requisitos previos.
+        """
         self.estudiante.matricularUC(materia)
 
     def desmatricularEstudiante(self, materia: UC):
+        """
+        Desmatricula al estudiante de una unidad curricular.
+
+        Args:
+            materia (UC): Objeto UC correspondiente a la materia a desmatricular.
+
+        Este método delega la operación de desmatriculación al método `desmatricularUC` del estudiante.
+        """
         self.estudiante.desmatricularUC(materia)
     
     def verInscriptos(self):
+        """
+        Retorna la lista de estudiantes inscriptos por unidad curricular.
+
+        Returns:
+            dict: Diccionario con las materias como claves y listas de estudiantes como valores.
+
+        Este método accede al expediente del sistema para obtener el registro completo de inscriptos.
+        """
         return self.expediente.verListaInscriptos()
